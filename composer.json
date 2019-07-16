@@ -1,0 +1,31 @@
+{
+    "name": "devorto/caching",
+    "description": "Simple caching interface to provide key/value cache and adapters.",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Devorto",
+            "email": "info@devorto.com",
+            "homepage": "https://www.devorto.com/",
+            "role": "Owner"
+        },
+        {
+            "name": "Geoffrey Dijkstra",
+            "email": "geoffrey@devorto.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^7.1",
+        "ext-json": "*"
+    },
+    "suggest": {
+        "ext-redis": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Devorto\\Caching\\": "src"
+        }
+    }
+}
