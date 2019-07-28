@@ -53,6 +53,14 @@ class FileCache implements Cache
         }
     }
 
+    protected function saveIndexFile(): void
+    {
+        file_put_contents(
+            $this->cacheDirectory . DIRECTORY_SEPARATOR . static::CACHE_INDEX_FILENAME,
+            json_encode($this->cacheContents)
+        );
+    }
+
     /**
      * @return string
      */
@@ -104,10 +112,7 @@ class FileCache implements Cache
             $value
         );
 
-        file_put_contents(
-            $this->cacheDirectory . DIRECTORY_SEPARATOR . static::CACHE_INDEX_FILENAME,
-            json_encode($this->cacheContents)
-        );
+        $this->saveIndexFile();
 
         return $this;
     }
@@ -165,10 +170,22 @@ class FileCache implements Cache
             unlink($path);
         }
 
-        file_put_contents(
-            $this->cacheDirectory . DIRECTORY_SEPARATOR . static::CACHE_INDEX_FILENAME,
-            json_encode($this->cacheContents)
-        );
+        $this->saveIndexFile();
+
+        return $this;
+    }
+
+    /**
+     * @return Cache
+     */
+    public function clear(): Cache
+    {
+        foreach ($this->cacheContents as $key => $value) {
+            $prefix = substr($key, 0, strlen($this->prefix));
+            if ($prefix === $this->prefix) {
+                $this->delete(substr($key, strlen($prefix)));
+            }
+        }
 
         return $this;
     }

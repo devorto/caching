@@ -38,4 +38,9 @@ interface Cache
      * @return Cache
      */
     public function delete(string $key): Cache;
+
+    /**
+     * @return Cache
+     */
+    public function clear(): Cache;
 }
