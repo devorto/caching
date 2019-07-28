@@ -26,7 +26,7 @@ class RedisCache implements Cache
     public function __construct(string $host = 'localhost', int $port = 6379)
     {
         $this->redis = new Redis();
-        if($this->redis->connect($host, $port) === false) {
+        if ($this->redis->connect($host, $port) === false) {
             throw new RuntimeException('Cannot connect to redis.');
         }
     }
@@ -60,7 +60,7 @@ class RedisCache implements Cache
      */
     public function set(string $key, string $value, int $ttl = 0): Cache
     {
-        $this->redis->set($key, $value, $ttl);
+        $this->redis->set($this->getPrefix() . $key, $value, $ttl);
 
         return $this;
     }
@@ -72,9 +72,9 @@ class RedisCache implements Cache
      */
     public function get(string $key): ?string
     {
-        $data = $this->redis->get($key);
+        $data = $this->redis->get($this->getPrefix() . $key);
 
-        if($data === false) {
+        if ($data === false) {
             return null;
         }
 
@@ -88,7 +88,7 @@ class RedisCache implements Cache
      */
     public function delete(string $key): Cache
     {
-        $this->redis->delete($key);
+        $this->redis->delete($this->getPrefix() . $key);
 
         return $this;
     }
