@@ -36,6 +36,10 @@ class RedisCache implements Cache
      */
     public function getPrefix(): string
     {
+        if (empty($this->prefix)) {
+            throw new RuntimeException('Prefix is not set, please provide one.');
+        }
+
         return $this->prefix;
     }
 

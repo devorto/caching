@@ -23,6 +23,7 @@ class FileCache implements Cache
 
     /**
      * Contains keys + ttl to clean up expired files (is persistent).
+     *
      * @var array
      */
     protected $cacheContents = [];
@@ -57,6 +58,10 @@ class FileCache implements Cache
      */
     public function getPrefix(): string
     {
+        if (empty($this->prefix)) {
+            throw new RuntimeException('Prefix is not set, please provide one.');
+        }
+
         return $this->prefix;
     }
 
@@ -91,7 +96,7 @@ class FileCache implements Cache
      */
     public function set(string $key, string $value, int $ttl = 0): Cache
     {
-        $key = $this->prefix . $this->normalize($key);
+        $key = $this->getPrefix() . $this->normalize($key);
         $this->cacheContents[$key] = $ttl;
 
         file_put_contents(
@@ -114,7 +119,7 @@ class FileCache implements Cache
      */
     public function get(string $key): ?string
     {
-        $key = $this->prefix . $this->normalize($key);
+        $key = $this->getPrefix() . $this->normalize($key);
 
         if (!isset($this->cacheContents[$key])) {
             return null;
@@ -131,7 +136,7 @@ class FileCache implements Cache
 
         // See if file TTL has expired (and is not infinite).
         $ttl = $this->cacheContents[$key];
-        if($ttl !== 0) {
+        if ($ttl !== 0) {
             $stamp = filemtime($path);
 
             if (($stamp + $ttl) < time()) {
@@ -151,7 +156,7 @@ class FileCache implements Cache
      */
     public function delete(string $key): Cache
     {
-        $key = $this->prefix . $this->normalize($key);
+        $key = $this->getPrefix() . $this->normalize($key);
         $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $key;
 
         unset($this->cacheContents[$key]);
