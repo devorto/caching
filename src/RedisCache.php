@@ -20,15 +20,18 @@ class RedisCache implements Cache
     /**
      * RedisCache constructor.
      *
+     * @param string $prefix
      * @param string $host
      * @param int $port
      */
-    public function __construct(string $host = 'localhost', int $port = 6379)
+    public function __construct(string $prefix, string $host = 'localhost', int $port = 6379)
     {
         $this->redis = new Redis();
         if ($this->redis->connect($host, $port) === false) {
             throw new RuntimeException('Cannot connect to redis.');
         }
+
+        $this->setPrefix($prefix);
     }
 
     /**
@@ -104,8 +107,8 @@ class RedisCache implements Cache
     {
         $keys = $this->redis->keys('*');
         foreach ($keys as $key) {
-            $prefix = substr($key, 0, strlen($this->prefix));
-            if ($prefix === $this->prefix) {
+            $prefix = substr($key, 0, strlen($this->getPrefix()));
+            if ($prefix === $this->getPrefix()) {
                 $this->delete(substr($key, strlen($prefix)));
             }
         }

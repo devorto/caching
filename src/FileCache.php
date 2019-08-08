@@ -2,6 +2,7 @@
 
 namespace Devorto\Caching;
 
+use InvalidArgumentException;
 use RuntimeException;
 
 class FileCache implements Cache
@@ -31,9 +32,10 @@ class FileCache implements Cache
     /**
      * FileCache constructor.
      *
+     * @param string $prefix
      * @param string $cacheDirectory Full path to cache directory.
      */
-    public function __construct(string $cacheDirectory)
+    public function __construct(string $prefix, string $cacheDirectory)
     {
         $cacheDirectory = realpath($cacheDirectory);
         if (empty($cacheDirectory)) {
@@ -51,6 +53,8 @@ class FileCache implements Cache
             $indexFile = file_get_contents($indexFile);
             $this->cacheContents = json_decode($indexFile, true);
         }
+
+        $this->setPrefix($prefix);
     }
 
     protected function saveIndexFile(): void
@@ -80,6 +84,10 @@ class FileCache implements Cache
      */
     public function setPrefix(string $prefix): Cache
     {
+        if (empty(trim($prefix))) {
+            throw new InvalidArgumentException('Prefix cannot be empty.');
+        }
+
         $this->prefix = $this->normalize($prefix);
 
         return $this;
@@ -181,8 +189,8 @@ class FileCache implements Cache
     public function clear(): Cache
     {
         foreach ($this->cacheContents as $key => $value) {
-            $prefix = substr($key, 0, strlen($this->prefix));
-            if ($prefix === $this->prefix) {
+            $prefix = substr($key, 0, strlen($this->getPrefix()));
+            if ($prefix === $this->getPrefix()) {
                 $this->delete(substr($key, strlen($prefix)));
             }
         }
