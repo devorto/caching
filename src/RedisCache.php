@@ -95,7 +95,7 @@ class RedisCache implements Cache
      */
     public function delete(string $key): Cache
     {
-        $this->redis->delete($this->getPrefix() . $key);
+        $this->redis->del($this->getPrefix() . $key);
 
         return $this;
     }
