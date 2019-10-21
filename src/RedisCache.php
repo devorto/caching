@@ -67,7 +67,7 @@ class RedisCache implements Cache
      */
     public function set(string $key, string $value, int $ttl = 0): Cache
     {
-        $this->redis->set($this->getPrefix() . $key, $value, $ttl);
+        $this->redis->set($this->getPrefix() . $key, $value, $ttl === 0 ? null : $ttl);
 
         return $this;
     }
