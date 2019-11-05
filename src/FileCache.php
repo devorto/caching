@@ -13,11 +13,6 @@ use RuntimeException;
 class FileCache implements Cache
 {
     /**
-     * Filename of TTL file.
-     */
-    const CACHE_INDEX_FILENAME = '__cache_index__.json';
-
-    /**
      * @var string
      */
     protected $cacheDirectory;
@@ -26,13 +21,6 @@ class FileCache implements Cache
      * @var string
      */
     protected $prefix = '';
-
-    /**
-     * Contains keys + ttl to clean up expired files (is persistent).
-     *
-     * @var array
-     */
-    protected $cacheContents = [];
 
     /**
      * FileCache constructor.
@@ -56,25 +44,6 @@ class FileCache implements Cache
         if (!is_writeable($cacheDirectory)) {
             throw new RuntimeException('Cache directory is not writeable.');
         }
-
-        $this->cacheDirectory = $cacheDirectory;
-
-        $indexFile = $this->cacheDirectory . DIRECTORY_SEPARATOR . static::CACHE_INDEX_FILENAME;
-        if (file_exists($indexFile)) {
-            $indexFile = file_get_contents($indexFile);
-            $this->cacheContents = json_decode($indexFile, true);
-        }
-    }
-
-    /**
-     * Saves the index file.
-     */
-    protected function saveIndexFile(): void
-    {
-        file_put_contents(
-            $this->cacheDirectory . DIRECTORY_SEPARATOR . static::CACHE_INDEX_FILENAME,
-            json_encode($this->cacheContents)
-        );
     }
 
     /**
@@ -104,15 +73,11 @@ class FileCache implements Cache
      */
     public function set(string $key, string $value, int $ttl = 0): Cache
     {
-        $key = $this->getPrefix() . $this->normalize($key);
-        $this->cacheContents[$key] = $ttl;
+        $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
+        $ttlKey = $key . '-ttl';
 
-        file_put_contents(
-            $this->cacheDirectory . DIRECTORY_SEPARATOR . $key,
-            $value
-        );
-
-        $this->saveIndexFile();
+        file_put_contents($key, $value);
+        file_put_contents($ttlKey, $ttl);
 
         return $this;
     }
@@ -124,23 +89,21 @@ class FileCache implements Cache
      */
     public function get(string $key): ?string
     {
-        $key = $this->getPrefix() . $this->normalize($key);
-
-        if (!isset($this->cacheContents[$key])) {
+        $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
+        $ttlPath = $path . '-ttl';
+        if (!file_exists($path)) {
             return null;
         }
 
-        $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $key;
-
-        // This should never happen but in case it does, solve it gracefully.
-        if (!file_exists($path)) {
-            $this->delete($key);
+        // If there is no -ttl file remove the cache file.
+        if (!file_exists($ttlPath)) {
+            unlink($path);
 
             return null;
         }
 
         // See if file TTL has expired (and is not infinite).
-        $ttl = $this->cacheContents[$key];
+        $ttl = file_get_contents($ttlPath);
         if ($ttl !== 0) {
             $stamp = filemtime($path);
 
@@ -161,16 +124,16 @@ class FileCache implements Cache
      */
     public function delete(string $key): Cache
     {
-        $key = $this->getPrefix() . $this->normalize($key);
-        $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $key;
+        $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
+        $ttlKey = $key . '-ttl';
 
-        unset($this->cacheContents[$key]);
-
-        if (file_exists($path)) {
-            unlink($path);
+        if (file_exists($key)) {
+            unlink($key);
         }
 
-        $this->saveIndexFile();
+        if (file_exists($ttlKey)) {
+            unlink($ttlKey);
+        }
 
         return $this;
     }
@@ -180,10 +143,14 @@ class FileCache implements Cache
      */
     public function clear(): Cache
     {
-        foreach ($this->cacheContents as $key => $value) {
-            $prefix = substr($key, 0, strlen($this->getPrefix()));
+        foreach (scandir($this->cacheDirectory) as $file) {
+            if (substr($file, 0, 1) === '.') {
+                continue;
+            }
+
+            $prefix = substr($file, 0, strlen($this->getPrefix()));
             if ($prefix === $this->getPrefix()) {
-                $this->delete(substr($key, strlen($prefix)));
+                $this->delete(substr($file, strlen($prefix)));
             }
         }
 
