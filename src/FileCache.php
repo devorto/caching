@@ -105,7 +105,7 @@ class FileCache implements Cache
         }
 
         // See if file TTL has expired (and is not infinite).
-        $ttl = file_get_contents($ttlPath);
+        $ttl = (int)file_get_contents($ttlPath);
         if ($ttl !== 0) {
             $stamp = filemtime($path);
 
