@@ -44,6 +44,8 @@ class FileCache implements Cache
         if (!is_writeable($cacheDirectory)) {
             throw new RuntimeException('Cache directory is not writeable.');
         }
+
+        $this->cacheDirectory = $cacheDirectory;
     }
 
     /**
