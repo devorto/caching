@@ -5,6 +5,11 @@ namespace Devorto\Caching;
 use InvalidArgumentException;
 use RuntimeException;
 
+/**
+ * Class FileCache
+ *
+ * @package Devorto\Caching
+ */
 class FileCache implements Cache
 {
     /**
@@ -37,6 +42,12 @@ class FileCache implements Cache
      */
     public function __construct(string $prefix, string $cacheDirectory)
     {
+        if (empty(trim($prefix))) {
+            throw new InvalidArgumentException('Prefix cannot be empty.');
+        }
+
+        $this->prefix = $this->normalize($prefix);
+
         $cacheDirectory = realpath($cacheDirectory);
         if (empty($cacheDirectory)) {
             throw new RuntimeException('Cache directory does not exists.');
@@ -53,10 +64,11 @@ class FileCache implements Cache
             $indexFile = file_get_contents($indexFile);
             $this->cacheContents = json_decode($indexFile, true);
         }
-
-        $this->setPrefix($prefix);
     }
 
+    /**
+     * Saves the index file.
+     */
     protected function saveIndexFile(): void
     {
         file_put_contents(
@@ -78,29 +90,13 @@ class FileCache implements Cache
     }
 
     /**
-     * @param string $prefix
-     *
-     * @return Cache
-     */
-    public function setPrefix(string $prefix): Cache
-    {
-        if (empty(trim($prefix))) {
-            throw new InvalidArgumentException('Prefix cannot be empty.');
-        }
-
-        $this->prefix = $this->normalize($prefix);
-
-        return $this;
-    }
-
-    /**
      * @param string $key
      *
      * @return string
      */
     protected function normalize(string $key): string
     {
-        return preg_replace('/[^0-9a-zA-Z]+/', '-', $key);
+        return preg_replace('/[^0-9A-Z]+/i', '-', $key);
     }
 
     /**

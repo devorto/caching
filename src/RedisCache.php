@@ -2,9 +2,15 @@
 
 namespace Devorto\Caching;
 
+use InvalidArgumentException;
 use Redis;
 use RuntimeException;
 
+/**
+ * Class RedisCache
+ *
+ * @package Devorto\Caching
+ */
 class RedisCache implements Cache
 {
     /**
@@ -26,12 +32,14 @@ class RedisCache implements Cache
      */
     public function __construct(string $prefix, string $host = 'localhost', int $port = 6379)
     {
+        if (empty(trim($prefix))) {
+            throw new InvalidArgumentException('Prefix cannot be empty.');
+        }
+
         $this->redis = new Redis();
         if ($this->redis->connect($host, $port) === false) {
             throw new RuntimeException('Cannot connect to redis.');
         }
-
-        $this->setPrefix($prefix);
     }
 
     /**
@@ -44,18 +52,6 @@ class RedisCache implements Cache
         }
 
         return $this->prefix;
-    }
-
-    /**
-     * @param string $prefix
-     *
-     * @return Cache
-     */
-    public function setPrefix(string $prefix): Cache
-    {
-        $this->prefix = $prefix;
-
-        return $this;
     }
 
     /**

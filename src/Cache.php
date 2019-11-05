@@ -5,13 +5,6 @@ namespace Devorto\Caching;
 interface Cache
 {
     /**
-     * @param string $prefix
-     *
-     * @return Cache
-     */
-    public function setPrefix(string $prefix): Cache;
-
-    /**
      * @return string
      */
     public function getPrefix(): string;
