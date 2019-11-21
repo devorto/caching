@@ -35,6 +35,7 @@ class RedisCache implements Cache
         if (empty(trim($prefix))) {
             throw new InvalidArgumentException('Prefix cannot be empty.');
         }
+        $this->prefix = $prefix;
 
         $this->redis = new Redis();
         if ($this->redis->connect($host, $port) === false) {
