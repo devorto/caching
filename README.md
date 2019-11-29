@@ -4,3 +4,4 @@ Simple caching interface for caching with adapters so you can easily switch betw
 ## Currently available adapters
 * Redis
 * File
+* Session
