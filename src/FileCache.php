@@ -34,8 +34,6 @@ class FileCache implements Cache
             throw new InvalidArgumentException('Prefix cannot be an empty string.');
         }
 
-        $this->prefix = $this->normalize($prefix);
-
         $cacheDirectory = realpath($cacheDirectory);
         if (empty($cacheDirectory)) {
             throw new RuntimeException('Cache directory does not exists.');
@@ -45,6 +43,7 @@ class FileCache implements Cache
             throw new RuntimeException('Cache directory is not writeable.');
         }
 
+        $this->prefix = sha1($prefix);
         $this->cacheDirectory = $cacheDirectory;
     }
 
@@ -63,7 +62,7 @@ class FileCache implements Cache
      */
     protected function normalize(string $key): string
     {
-        return preg_replace('/[^0-9A-Z]+/i', '-', $key);
+        return sha1($key);
     }
 
     /**
