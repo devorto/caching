@@ -31,7 +31,7 @@ class FileCache implements Cache
     public function __construct(string $prefix, string $cacheDirectory)
     {
         if (empty(trim($prefix))) {
-            throw new InvalidArgumentException('Prefix cannot be empty.');
+            throw new InvalidArgumentException('Prefix cannot be an empty string.');
         }
 
         $this->prefix = $this->normalize($prefix);
@@ -75,6 +75,14 @@ class FileCache implements Cache
      */
     public function set(string $key, string $value, int $ttl = 0): Cache
     {
+        if (empty(trim($key))) {
+            throw new InvalidArgumentException('Key cannot be an empty string.');
+        }
+
+        if ($ttl < 0) {
+            throw new InvalidArgumentException('TTL should be >= 0.');
+        }
+
         $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
         $ttlKey = $key . '-ttl';
 
@@ -91,6 +99,10 @@ class FileCache implements Cache
      */
     public function get(string $key): ?string
     {
+        if (empty(trim($key))) {
+            throw new InvalidArgumentException('Key cannot be an empty string.');
+        }
+
         $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
         $ttlPath = $path . '-ttl';
         if (!file_exists($path)) {
@@ -126,6 +138,10 @@ class FileCache implements Cache
      */
     public function delete(string $key): Cache
     {
+        if (empty(trim($key))) {
+            throw new InvalidArgumentException('Key cannot be an empty string.');
+        }
+
         $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
         $ttlKey = $key . '-ttl';
 
