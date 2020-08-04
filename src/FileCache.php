@@ -167,7 +167,7 @@ class FileCache implements Cache
 
             $prefix = substr($file, 0, strlen($this->getPrefix()));
             if ($prefix === $this->getPrefix()) {
-                $this->delete(substr($file, strlen($prefix)));
+                unlink($this->cacheDirectory . DIRECTORY_SEPARATOR . $file);
             }
         }
 
