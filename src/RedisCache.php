@@ -115,12 +115,9 @@ class RedisCache implements Cache
      */
     public function clear(): Cache
     {
-        $keys = $this->redis->keys('*');
-        foreach ($keys as $key) {
-            $prefix = substr($key, 0, strlen($this->getPrefix()));
-            if ($prefix === $this->getPrefix()) {
-                $this->delete(substr($key, strlen($prefix)));
-            }
+        $keys = $this->redis->keys($this->getPrefix() . '*');
+        if (!empty($keys)) {
+            $this->redis->del($keys);
         }
 
         return $this;
