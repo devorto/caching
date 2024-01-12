@@ -104,11 +104,14 @@ class FileCache implements Cache
 
         $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
         $ttlPath = $path . '-ttl';
+
+        clearstatcache();
         if (!file_exists($path)) {
             return null;
         }
 
         // If there is no -ttl file remove the cache file.
+        clearstatcache();
         if (!file_exists($ttlPath)) {
             unlink($path);
 
@@ -144,10 +147,12 @@ class FileCache implements Cache
         $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
         $ttlKey = $key . '-ttl';
 
+        clearstatcache();
         if (file_exists($key)) {
             unlink($key);
         }
 
+        clearstatcache();
         if (file_exists($ttlKey)) {
             unlink($ttlKey);
         }
@@ -167,7 +172,10 @@ class FileCache implements Cache
 
             $prefix = substr($file, 0, strlen($this->getPrefix()));
             if ($prefix === $this->getPrefix()) {
-                unlink($this->cacheDirectory . DIRECTORY_SEPARATOR . $file);
+                clearstatcache();
+                if (file_exists($this->cacheDirectory . DIRECTORY_SEPARATOR . $file)) {
+                    unlink($this->cacheDirectory . DIRECTORY_SEPARATOR . $file);
+                }
             }
         }
 
