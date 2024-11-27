@@ -21,7 +21,7 @@ interface Cache
     /**
      * @param string $key
      *
-     * @return string|null Returns null if the key doesn't exists.
+     * @return string|null Returns null if the key doesn't exist.
      */
     public function get(string $key): ?string;
 

@@ -15,12 +15,12 @@ class FileCache implements Cache
     /**
      * @var string
      */
-    protected $cacheDirectory;
+    protected string $cacheDirectory;
 
     /**
      * @var string
      */
-    protected $prefix = '';
+    protected string $prefix = '';
 
     /**
      * FileCache constructor.
@@ -94,7 +94,7 @@ class FileCache implements Cache
     /**
      * @param string $key
      *
-     * @return string|null Returns null if the key doesn't exists.
+     * @return string|null Returns null if the key doesn't exist.
      */
     public function get(string $key): ?string
     {
@@ -166,7 +166,7 @@ class FileCache implements Cache
     public function clear(): Cache
     {
         foreach (scandir($this->cacheDirectory) as $file) {
-            if (substr($file, 0, 1) === '.') {
+            if (str_starts_with($file, '.')) {
                 continue;
             }
 
