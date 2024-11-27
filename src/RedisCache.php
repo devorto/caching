@@ -4,6 +4,7 @@ namespace Devorto\Caching;
 
 use InvalidArgumentException;
 use Redis;
+use RedisException;
 use RuntimeException;
 
 /**
@@ -16,12 +17,12 @@ class RedisCache implements Cache
     /**
      * @var Redis
      */
-    protected $redis;
+    protected Redis $redis;
 
     /**
      * @var string
      */
-    protected $prefix = '';
+    protected string $prefix = '';
 
     /**
      * RedisCache constructor.
@@ -29,18 +30,27 @@ class RedisCache implements Cache
      * @param string $prefix
      * @param string $host
      * @param int $port
+     * @param int $database
      */
-    public function __construct(string $prefix, string $host = 'localhost', int $port = 6379)
+    public function __construct(string $prefix, string $host = 'localhost', int $port = 6379, int $database = 0)
     {
         if (empty(trim($prefix))) {
             throw new InvalidArgumentException('Prefix cannot be an empty string.');
         }
 
         $this->prefix = $prefix;
-        $this->redis = new Redis();
+        try {
+            $this->redis = new Redis();
 
-        if ($this->redis->connect($host, $port) === false) {
-            throw new RuntimeException('Cannot connect to redis.');
+            if ($this->redis->connect($host, $port) === false) {
+                throw new RuntimeException('Cannot connect to redis.');
+            }
+
+            if ($database > 0) {
+                $this->redis->select($database);
+            }
+        } catch (RedisException $exception) {
+            throw new RuntimeException('Cannot connect to redis.', 0, $exception);
         }
     }
 
@@ -69,7 +79,11 @@ class RedisCache implements Cache
             throw new InvalidArgumentException('TTL should be >= 0.');
         }
 
-        $this->redis->set($this->getPrefix() . $key, $value, $ttl === 0 ? null : $ttl);
+        try {
+            $this->redis->set($this->getPrefix() . $key, $value, $ttl === 0 ? null : $ttl);
+        } catch (RedisException $exception) {
+            throw new RuntimeException('Error while saving value in Redis.', 0, $exception);
+        }
 
         return $this;
     }
@@ -77,7 +91,7 @@ class RedisCache implements Cache
     /**
      * @param string $key
      *
-     * @return string|null Returns null if the key doesn't exists.
+     * @return string|null Returns null if the key doesn't exist.
      */
     public function get(string $key): ?string
     {
@@ -85,7 +99,11 @@ class RedisCache implements Cache
             throw new InvalidArgumentException('Key cannot be an empty string.');
         }
 
-        $data = $this->redis->get($this->getPrefix() . $key);
+        try {
+            $data = $this->redis->get($this->getPrefix() . $key);
+        } catch (RedisException $exception) {
+            throw new RuntimeException('Error while retrieving value from Redis.', 0, $exception);
+        }
 
         if ($data === false) {
             return null;
@@ -105,7 +123,11 @@ class RedisCache implements Cache
             throw new InvalidArgumentException('Key cannot be an empty string.');
         }
 
-        $this->redis->del($this->getPrefix() . $key);
+        try {
+            $this->redis->del($this->getPrefix() . $key);
+        } catch (RedisException $exception) {
+            throw new RuntimeException('Error while deleting key from Redis.', 0, $exception);
+        }
 
         return $this;
     }
@@ -115,9 +137,18 @@ class RedisCache implements Cache
      */
     public function clear(): Cache
     {
-        $keys = $this->redis->keys($this->getPrefix() . '*');
+        try {
+            $keys = $this->redis->keys($this->getPrefix() . '*');
+        } catch (RedisException $exception) {
+            throw new RuntimeException('Error while retrieving all keys from Redis.', 0, $exception);
+        }
+
         if (!empty($keys)) {
-            $this->redis->del($keys);
+            try {
+                $this->redis->del($keys);
+            } catch (RedisException $exception) {
+                throw new RuntimeException('Error while deleting key from Redis.', 0, $exception);
+            }
         }
 
         return $this;
