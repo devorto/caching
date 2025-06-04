@@ -85,8 +85,8 @@ class FileCache implements Cache
         $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
         $ttlKey = $key . '-ttl';
 
-        file_put_contents($key, $value);
-        file_put_contents($ttlKey, $ttl);
+        file_put_contents($key, $value, LOCK_EX);
+        file_put_contents($ttlKey, $ttl, LOCK_EX);
 
         return $this;
     }
