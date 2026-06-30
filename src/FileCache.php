@@ -82,11 +82,15 @@ class FileCache implements Cache
             throw new InvalidArgumentException('TTL should be >= 0.');
         }
 
-        $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
-        $ttlKey = $key . '-ttl';
+        $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
 
-        file_put_contents($key, $value, LOCK_EX);
-        file_put_contents($ttlKey, $ttl, LOCK_EX);
+        // Bereken de absolute timestamp (0 = oneindig geldig)
+        $expiresAt = ($ttl === 0) ? 0 : (time() + $ttl);
+
+        // Voeg de timestamp en de data samen in één payload, gescheiden door een newline
+        $payload = $expiresAt . PHP_EOL . $value;
+
+        file_put_contents($path, $payload, LOCK_EX);
 
         return $this;
     }
@@ -103,34 +107,31 @@ class FileCache implements Cache
         }
 
         $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
-        $ttlPath = $path . '-ttl';
 
-        clearstatcache();
+        // Windows-proof stat cache reset specifiek voor dit bestandspad
+        clearstatcache(true, $path);
         if (!file_exists($path)) {
             return null;
         }
 
-        // If there is no -ttl file remove the cache file.
-        clearstatcache();
-        if (!file_exists($ttlPath)) {
-            unlink($path);
+        $content = file_get_contents($path);
+        if (empty($content)) {
+            return null;
+        }
+
+        // Splits alleen de eerste regel af (de verloop-timestamp) van de rest van de data
+        $parts = explode(PHP_EOL, $content, 2);
+        $expiresAt = (int)$parts[0];
+        $value = $parts[1] ?? '';
+
+        // Controleer of de harde timestamp is verlopen (en niet oneindig '0' is)
+        if ($expiresAt !== 0 && $expiresAt < time()) {
+            $this->delete($key);
 
             return null;
         }
 
-        // See if file TTL has expired (and is not infinite).
-        $ttl = (int)file_get_contents($ttlPath);
-        if ($ttl !== 0) {
-            $stamp = filemtime($path);
-
-            if (($stamp + $ttl) < time()) {
-                $this->delete($key);
-
-                return null;
-            }
-        }
-
-        return file_get_contents($path);
+        return $value;
     }
 
     /**
@@ -144,17 +145,11 @@ class FileCache implements Cache
             throw new InvalidArgumentException('Key cannot be an empty string.');
         }
 
-        $key = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
-        $ttlKey = $key . '-ttl';
+        $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
 
-        clearstatcache();
-        if (file_exists($key)) {
-            unlink($key);
-        }
-
-        clearstatcache();
-        if (file_exists($ttlKey)) {
-            unlink($ttlKey);
+        clearstatcache(true, $path);
+        if (file_exists($path)) {
+            @unlink($path);
         }
 
         return $this;
@@ -172,9 +167,11 @@ class FileCache implements Cache
 
             $prefix = substr($file, 0, strlen($this->getPrefix()));
             if ($prefix === $this->getPrefix()) {
-                clearstatcache();
-                if (file_exists($this->cacheDirectory . DIRECTORY_SEPARATOR . $file)) {
-                    unlink($this->cacheDirectory . DIRECTORY_SEPARATOR . $file);
+                $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $file;
+
+                clearstatcache(true, $path);
+                if (file_exists($path)) {
+                    @unlink($path);
                 }
             }
         }
