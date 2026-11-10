@@ -50,6 +50,26 @@ class NullCache implements Cache
     }
 
     /**
+     * @param string $key
+     * @param string $value
+     *
+     * @return void
+     */
+    public function enqueue(string $key, string $value): void
+    {
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return string|null
+     */
+    public function dequeue(string $key): ?string
+    {
+        return null;
+    }
+
+    /**
      * @return Cache
      */
     public function clear(): Cache

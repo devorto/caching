@@ -92,6 +92,12 @@ class FileCache implements Cache
 
         file_put_contents($path, $payload, LOCK_EX);
 
+        $queuePath = $path . '-queue';
+        clearstatcache(true, $queuePath);
+        if (file_exists($queuePath)) {
+            @unlink($queuePath);
+        }
+
         return $this;
     }
 
@@ -147,12 +153,109 @@ class FileCache implements Cache
 
         $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
 
-        clearstatcache(true, $path);
-        if (file_exists($path)) {
-            @unlink($path);
+        foreach ([$path, $path . '-queue'] as $cachePath) {
+            clearstatcache(true, $cachePath);
+            if (file_exists($cachePath)) {
+                @unlink($cachePath);
+            }
         }
 
         return $this;
+    }
+
+    /**
+     * @param string $key
+     * @param string $value
+     *
+     * @return void
+     */
+    public function enqueue(string $key, string $value): void
+    {
+        $this->updateQueue($key, $value);
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return string|null Returns null when the queue is empty or missing.
+     */
+    public function dequeue(string $key): ?string
+    {
+        return $this->updateQueue($key, null);
+    }
+
+    /**
+     * Keep the same file locked throughout a queue update, including when empty.
+     * Deleting an empty queue file would let concurrent callers lock different files.
+     *
+     * @param string $key
+     * @param string|null $value Null removes a value; a string appends one.
+     *
+     * @return string|null
+     */
+    protected function updateQueue(string $key, ?string $value): ?string
+    {
+        if (empty(trim($key))) {
+            throw new InvalidArgumentException('Key cannot be an empty string.');
+        }
+
+        $path = $this->cacheDirectory . DIRECTORY_SEPARATOR . $this->getPrefix() . $this->normalize($key);
+        clearstatcache(true, $path);
+        if (file_exists($path)) {
+            throw new RuntimeException('Cache key does not contain a queue.');
+        }
+
+        $path .= '-queue';
+        $stream = @fopen($path, 'c+b');
+        if ($stream === false) {
+            throw new RuntimeException('Cannot open queue file.');
+        }
+
+        try {
+            if (!flock($stream, LOCK_EX)) {
+                throw new RuntimeException('Cannot lock queue file.');
+            }
+
+            $content = stream_get_contents($stream);
+            if ($content === false) {
+                throw new RuntimeException('Cannot read queue file.');
+            }
+
+            $items = [];
+            if ($content !== '') {
+                $items = @unserialize($content, ['allowed_classes' => false]);
+                if (!is_array($items) || array_values($items) !== $items) {
+                    throw new RuntimeException('Invalid queue contents.');
+                }
+
+                foreach ($items as $item) {
+                    if (!is_string($item)) {
+                        throw new RuntimeException('Invalid queue value.');
+                    }
+                }
+            }
+
+            $result = null;
+            if ($value === null) {
+                $result = array_shift($items);
+            } else {
+                $items[] = $value;
+            }
+
+            $payload = serialize($items);
+            if (
+                !rewind($stream)
+                || fwrite($stream, $payload) !== strlen($payload)
+                || !ftruncate($stream, strlen($payload))
+                || !fflush($stream)
+            ) {
+                throw new RuntimeException('Cannot write queue file.');
+            }
+
+            return $result;
+        } finally {
+            fclose($stream);
+        }
     }
 
     /**

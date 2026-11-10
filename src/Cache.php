@@ -33,6 +33,25 @@ interface Cache
     public function delete(string $key): Cache;
 
     /**
+     * Append a value to a temporary FIFO queue.
+     *
+     * @param string $key
+     * @param string $value
+     *
+     * @return void
+     */
+    public function enqueue(string $key, string $value): void;
+
+    /**
+     * Atomically remove the oldest value. Cache deletion may discard queues.
+     *
+     * @param string $key
+     *
+     * @return string|null Returns null when the queue is empty or missing.
+     */
+    public function dequeue(string $key): ?string;
+
+    /**
      * @return Cache
      */
     public function clear(): Cache;
