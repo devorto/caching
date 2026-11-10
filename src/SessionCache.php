@@ -148,6 +148,31 @@ class SessionCache implements Cache
     }
 
     /**
+     * @param string $key
+     * @param string $value
+     *
+     * @return void
+     *
+     * @throws RuntimeException
+     */
+    public function enqueue(string $key, string $value): void
+    {
+        throw new RuntimeException('Not Implemented');
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return string|null
+     *
+     * @throws RuntimeException
+     */
+    public function dequeue(string $key): ?string
+    {
+        throw new RuntimeException('Not Implemented');
+    }
+
+    /**
      * @return Cache
      */
     public function clear(): Cache

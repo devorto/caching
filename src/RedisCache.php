@@ -4,6 +4,7 @@ namespace Devorto\Caching;
 
 use InvalidArgumentException;
 use Redis;
+use RedisException;
 use RuntimeException;
 
 /**
@@ -108,6 +109,51 @@ class RedisCache implements Cache
         $this->redis->del($this->getPrefix() . $key);
 
         return $this;
+    }
+
+    /**
+     * @param string $key
+     * @param string $value
+     *
+     * @return void
+     */
+    public function enqueue(string $key, string $value): void
+    {
+        if (empty(trim($key))) {
+            throw new InvalidArgumentException('Key cannot be an empty string.');
+        }
+
+        try {
+            if ($this->redis->rPush($this->getPrefix() . $key, $value) === false) {
+                throw new RuntimeException('Error while appending a value to a Redis queue.');
+            }
+        } catch (RedisException $exception) {
+            throw new RuntimeException('Error while appending a value to a Redis queue.', 0, $exception);
+        }
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return string|null Returns null when the queue is empty or missing.
+     */
+    public function dequeue(string $key): ?string
+    {
+        if (empty(trim($key))) {
+            throw new InvalidArgumentException('Key cannot be an empty string.');
+        }
+
+        try {
+            $this->redis->clearLastError();
+            $value = $this->redis->lPop($this->getPrefix() . $key);
+            if ($value === false && $this->redis->getLastError() !== null) {
+                throw new RuntimeException('Error while removing a value from a Redis queue.');
+            }
+        } catch (RedisException $exception) {
+            throw new RuntimeException('Error while removing a value from a Redis queue.', 0, $exception);
+        }
+
+        return $value === false ? null : $value;
     }
 
     /**
